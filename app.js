@@ -1,15 +1,19 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const connect = require('./model/database');
-const user = require('./model/schema');
-const referal = require('./model/Referal_schema');
-const useraddress = require('./model/Address_schema')
+const { User,Userregister,ContractAddress,SupportTicket,BankDetails,Transaction} = require('./model/ops');
+// const ContractAddress = require('./model/ops');
+
 const cors = require('cors');
-
-
+const userSchema = new User();
+const referralSchema = new Userregister();
+const contractAddressSchema = new ContractAddress();
+const supportTicketSchema = new SupportTicket();
+const bankDetailsSchema = new BankDetails();
+const transactionSchema = new Transaction();
 const app = express();
-app.use(cors());
 
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -26,103 +30,165 @@ function generateuserid(length = 10) {
   return randomString;
 }
 
-
-
-
-
-// app.post('/save', async (req, res) => {
-
-//   const { Refcode, userAddress } = req.body;
-
-//   // const newUser = new user(req.body);                  both are same work done
-//   const newUser = new user({ Refcode, userAddress });
-//   await newUser.save().then(() => {
-//     res.status(201).json({ message: 'User created successfully' });
-
-//   },).catch((error) => {
-//     console.error(error);
-//     res.status(500).json({ message: 'Server error' });
-//   });
-
-
-  // } catch (error) {
-  //   console.error(error);
-  //   res.status(500).json({ message: 'Server error' });
-  // }
-
-// });
-
-
-
 app.post('/api/check-referral', async (req, res) => {
   const { referralCode } = req.body;
-
   try {
-    const referral = await user.findOne({ Refcode: referralCode });
-
+    const referral = await referralSchema.verifyReferal({referralCode:referralCode});
     if (referral) {
-      res.json({ success: true });
+      res.json({ success: true, message: 'valid referalcode' });
     } else {
-      res.json({ success: false, message: 'Invalid referral code' });
+      res.json({ success: false, message: 'invalid! referalcode' })
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server erro!!r' });
   }
 });
 
 
 
 app.post('/api/store-address', async (req, res) => {
-
-
   const { referralCode, userAddress } = req.body;
-
-  const userId = generateuserid()
-  console.log(userId);
+  const userId = generateuserid();
   try {
-    const referral = await user.findOne({ Refcode: referralCode });
-
-    if (referral) {
-      // res.json({ success: true });
-
+    const referral = await contractAddressSchema.useradd({ userId: userId, contractAddress: userAddress });
+    if(referral){
+      res.json({ success: true , message :'wallet connect' });
+    }else{
+      res.json({success:false , message:'occured some error'});
+    }
+  } catch (error) {
+    if (error.code === 11000) {
+      res.status(400).json({ success: false, message: 'User already signed up' });
     } else {
-      res.json({ success: false, message: 'Invalid referral code' });
-      return;
+      console.error(error);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  }
+});
+
+
+app.post('/api/verify-address',async(req, res) => {
+const { userAddress } = req.body;
+try{
+const existinguser = await contractAddressSchema.verifyadd({contractAddress:userAddress})
+if(existinguser){
+  res.json({success:true,message:'user exist'});
+  return ;
+}else{
+  res.json({success:false,message:'user not found'});
+  return;
+}
+}catch(error){
+  console.error(error);
+  res.status(500).json({ success: false, message: 'Server error' });
+}
+});
+
+
+app.get('/api/user-data',async(req,res)=>{
+try{
+  const existinguser = await contractAddressSchema.usershow ({contractAddress:"0xdc1e75b7b0a6d943ac527922035296596c85e466"});
+  if(existinguser){
+    res.json({userId:existinguser.userId,contractAddress:existinguser.contractAddress})
+  }else{
+    res.json({message:'user not found'});
+  }
+}catch (error){
+  console.error(error);
+  res.status(500).json({ success: false, message: 'Server error' });
+}
+
+
+
+app.post('/api/supporttic', async (req, res) => {
+  const userId = generateuserid();
+  const Ticketid = generateuserid();
+  const { subject , description , status} = req.body;
+ 
+  try {
+    const referral = await supportTicketSchema.support({ userId:userId , TicketId:Ticketid,subject:subject ,description:description,status:status});
+    // console.log(referral);
+    if(referral){
+      res.json({ success: true, message: 'Ticket created successfully!' });
+    } else {
+      res.json({ success: false, message: 'Failed to create ticket.' });
     }
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server error' });
-    return;
   }
+});
 
-  const newuser = new user({ userid: userId, userAddress: userAddress });
-  await newuser.save()
-  .then(async (result) => {
-    console.log('Data saved successfully:', result);
 
-    const newuserRef = new referal({ Refer_by: userId, Refer_to: referralCode });
-    await newuserRef.save();
-  }).catch((error) => {
-      if (error.code === 11000) {
-        res.status(400).json({ success: false, message: 'user already singin' });
-        return;
-      } else {
-        console.error(error);
-        res.status(500).json({ success: false, message: 'Server error' });
-        return;
-      }
-    });
-  // res.json({ success: true, message: 'MetaMask address stored successfully' });
+app.post('/api/addBanks', async (req, res) => {
+  const userId = generateuserid();
+
+  const { accountHolderName, accountNumber,bankName, IfscCode,TransectionType} = req.body;
+ 
+  try {
+
+    const referral = await bankDetailsSchema.addbank({ userId:userId ,accountHolderName: accountHolderName ,accountNumber:accountNumber,bankName:bankName,IFSCcode:IfscCode,Banktype:TransectionType});
+    // console.log(referral);
+
+    if(referral){
+      res.json({ success: true, message: 'create account sucessfully' });
+    } else {
+      res.json({ success: false, message: 'Failed to create account.' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
 
 
+app.post('/api/addMoney', async (req, res) => {
+  const userId = generateuserid();
+
+  const {amount ,TransectionType} = req.body;
+
+  try {
+    
+    const referral = await  transactionSchema.addmoney({ userId:userId,amount:amount,transactionType:TransectionType});
+
+    if(referral){
+      res.json({ success: true, message: 'money add sucessfully' });
+    } else {
+      res.json({ success: false, message: 'Failed to money in  account.' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 
+app.post('/api/userRegister', async (req, res) => {
+  const userId = generateuserid();
+  // console.log(userId);
+  const { username,  email, mobile_no, password, referralCode} = req.body;
+
+  // console.log(req.body);
+ 
+  try {
+    const referral = await  userSchema.userRegister({username:username,email:email,mobile_no:mobile_no,password:password,referralCode:referralCode,referredBy:userId});
+    // console.log(referral);
+
+    if(referral){
+      res.json({ success: true, message: 'user register sucessfully' });
+    } else {
+      res.json({ success: false, message: 'user register falied' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 
-
+});
 app.listen(4000, () => {
   console.log('server connect sucessfully')
 

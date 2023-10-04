@@ -1,21 +1,22 @@
-const mongoose = require("mongoose");
-const userSchema= new mongoose.Schema({
-
-    User_id:{
-        type:String,
-        require:false,
-        default:null,
-        trim:true
+const mongoose = require('mongoose');
+// Define Contract Address Schema
+const contractAddressSchema = new mongoose.Schema({
+    userId: {
+      type:String,
+      ref: 'User',
+      required: true,
+      trim:true,
+      unique:true,
     },
-    useraddress:{
-        type:String,
-        default:null,
-        trim:true
+    contractAddress: {
+      type: String,
+      unique:true,
+      required: true,
+      trim:true,      
+    },
+    // Other contract-related fields like contract name, description, etc.
+  });
 
-    }
-    
-    
-},{timestamps:true});
 
-const useraddress = mongoose.model('useraddress',userSchema);
-module.exports = useraddress;
+
+  module.exports = contractAddressSchema;
