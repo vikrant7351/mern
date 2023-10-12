@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema({
     referredBy: {
       type: mongoose.Schema.Types.String,
       required:true,
-      // ref: 'User',
+      ref: 'User',
     },
     leftChild: {
       type: mongoose.Schema.Types.ObjectId,

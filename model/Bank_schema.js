@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 // Define Bank Details Schema
 const bankDetailsSchema = new mongoose.Schema({
     userId: {
-      type:String,
-      // type: mongoose.Schema.Types.String,
-      // ref: 'User',
+      // type:String,
+      type: mongoose.Schema.Types.String,
+      ref: 'User',
       required: true,
     },
     accountHolderName: {

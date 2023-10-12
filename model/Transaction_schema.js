@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 // Define Transaction Schema (for adding and withdrawing money)
 const transactionSchema = new mongoose.Schema({
     userId: {
-      type:String,
-      // type: mongoose.Schema.Types.ObjectId,
-      // ref: 'User',
+      // type:String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
     },
     amount: {

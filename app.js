@@ -1,8 +1,9 @@
 const express = require('express');
+require('dotenv').config();
 const mongoose = require('mongoose');
 const connect = require('./model/database');
 const { User,Userregister,ContractAddress,SupportTicket,BankDetails,Transaction} = require('./model/ops');
-// const ContractAddress = require('./model/ops');
+const jwt = require('jsonwebtoken');
 
 const cors = require('cors');
 const userSchema = new User();
@@ -11,6 +12,7 @@ const contractAddressSchema = new ContractAddress();
 const supportTicketSchema = new SupportTicket();
 const bankDetailsSchema = new BankDetails();
 const transactionSchema = new Transaction();
+const {checkToken, ApiAutheticateToken} = require('./auth');
 const app = express();
 
 app.use(cors());
@@ -30,8 +32,9 @@ function generateuserid(length = 10) {
   return randomString;
 }
 
-app.post('/api/check-referral', async (req, res) => {
+app.post('/api/check-referral',ApiAutheticateToken, async (req, res) => {
   const { referralCode } = req.body;
+  
   try {
     const referral = await referralSchema.verifyReferal({referralCode:referralCode});
     if (referral) {
@@ -73,7 +76,11 @@ const { userAddress } = req.body;
 try{
 const existinguser = await contractAddressSchema.verifyadd({contractAddress:userAddress})
 if(existinguser){
-  res.json({success:true,message:'user exist'});
+
+  const secretKey = process.env.JWT_KEY; // Replace with your secret key
+  const token = jwt.sign({ user: existinguser }, secretKey, { expiresIn: '1h' });
+
+  res.json({success:true,message:'user exist',token});
   return ;
 }else{
   res.json({success:false,message:'user not found'});
@@ -86,7 +93,7 @@ if(existinguser){
 });
 
 
-app.get('/api/user-data',async(req,res)=>{
+app.get('/api/userdata',checkToken,async(req,res)=>{
 try{
   const existinguser = await contractAddressSchema.usershow ({contractAddress:"0xdc1e75b7b0a6d943ac527922035296596c85e466"});
   if(existinguser){
@@ -98,13 +105,14 @@ try{
   console.error(error);
   res.status(500).json({ success: false, message: 'Server error' });
 }
+});
 
 
 
-app.post('/api/supporttic', async (req, res) => {
-  const userId = generateuserid();
+app.post('/api/supporttic',checkToken, async (req, res) => {
+
   const Ticketid = generateuserid();
-  const { subject , description , status} = req.body;
+  const {userId, subject , description , status} = req.body;
  
   try {
     const referral = await supportTicketSchema.support({ userId:userId , TicketId:Ticketid,subject:subject ,description:description,status:status});
@@ -121,10 +129,9 @@ app.post('/api/supporttic', async (req, res) => {
 });
 
 
-app.post('/api/addBanks', async (req, res) => {
-  const userId = generateuserid();
-
-  const { accountHolderName, accountNumber,bankName, IfscCode,TransectionType} = req.body;
+app.post('/api/addBanks',checkToken, async (req, res) => {
+ 
+  const { userId,accountHolderName, accountNumber,bankName, IfscCode,TransectionType} = req.body;
  
   try {
 
@@ -144,10 +151,9 @@ app.post('/api/addBanks', async (req, res) => {
 
 
 
-app.post('/api/addMoney', async (req, res) => {
-  const userId = generateuserid();
+app.post('/api/addMoney',checkToken, async (req, res) => {
 
-  const {amount ,TransectionType} = req.body;
+  const {userId,amount ,TransectionType} = req.body;
 
   try {
     
@@ -165,12 +171,9 @@ app.post('/api/addMoney', async (req, res) => {
 });
 
 
-app.post('/api/userRegister', async (req, res) => {
-  const userId = generateuserid();
-  // console.log(userId);
-  const { username,  email, mobile_no, password, referralCode} = req.body;
+app.post('/api/userRegister',checkToken, async (req, res) => {
 
-  // console.log(req.body);
+  const { userId,username,  email, mobile_no, password, referralCode} = req.body;
  
   try {
     const referral = await  userSchema.userRegister({username:username,email:email,mobile_no:mobile_no,password:password,referralCode:referralCode,referredBy:userId});
@@ -187,9 +190,9 @@ app.post('/api/userRegister', async (req, res) => {
   }
 });
 
+const port = process.env.PORT || 3000
 
-});
-app.listen(4000, () => {
-  console.log('server connect sucessfully')
+app.listen(port, () => {
+  console.log(`server runing on ${port}`);
 
 });
